@@ -11,8 +11,6 @@ from exceptions import (APIErrorException,
                         SendMessageException,
                         )
 
-bot = ''
-
 logging.basicConfig(
     encoding='utf-8',
     level=logging.DEBUG,
@@ -64,7 +62,6 @@ def get_api_answer(current_timestamp):
         text_error = (f'API недоступен! Статус-код: '
                       f'{response.status_code}')
         logging.error(text_error)
-        send_message(bot, text_error)
         raise APIErrorException(text_error)
     else:
         info = 'Запрос к API выполнен успешно!'
@@ -77,18 +74,15 @@ def check_response(response):
     if response['homeworks'] == []:
         text_error = 'Получен список вместо словаря.'
         logging.error(text_error)
-        send_message(bot, text_error)
         raise TypeError(text_error)
     if 'homeworks' not in response:
         text_error = 'В ответе на запрос отсутствует ключ "homeworks"'
         logging.error(text_error)
-        send_message(bot, text_error)
         raise ValueError(text_error)
     homework = response['homeworks']
     if not isinstance(homework[0], dict):
         text_error = f'Ошибка типа данных! {homework} не словарь!'
         logging.error(text_error)
-        send_message(bot, text_error)
         raise TypeError(text_error)
     else:
         return homework
@@ -101,13 +95,11 @@ def parse_status(homework):
     except KeyError:
         text_error = 'В ответе от API отсутствует ключ "homework_name"'
         logger.error(text_error)
-        send_message(bot, text_error)
     try:
         homework_status = homework.get('status')
     except KeyError:
         text_error = 'В ответе от API отсутствует ключ "status"'
         logger.error(text_error)
-        send_message(bot, text_error)
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
