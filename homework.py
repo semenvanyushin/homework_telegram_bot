@@ -14,6 +14,7 @@ from exceptions import (APIErrorException,
 bot = ''
 
 logging.basicConfig(
+    encoding='utf-8',
     level=logging.DEBUG,
     filename='program.log',
     filemode='w',
