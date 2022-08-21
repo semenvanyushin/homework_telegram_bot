@@ -26,8 +26,9 @@ RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-
+no_status = 'no_status'
 HOMEWORK_STATUSES = {
+    'no_status': '',
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -72,7 +73,8 @@ def check_response(response):
     """Проверяет результат запроса на соответствие ожиданиям."""
     if response['homeworks'] == []:
         text_error = 'От API получен пустой список проверяемых работ.'
-        raise TypeError(text_error)
+        logging.debug(text_error)
+        return [{'status': no_status, 'homework_name': ''}]
     if 'homeworks' not in response:
         text_error = 'В ответе на запрос отсутствует ключ "homeworks"'
         raise ValueError(text_error)
@@ -99,7 +101,10 @@ def parse_status(homework):
         text_error = 'В ответе от API отсутствует ключ "status"'
         raise HomeworksKeyError(text_error)
     verdict = HOMEWORK_STATUSES[homework_status]
-    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+    if homework_status == no_status:
+        return 'Нет информации о проверяемой работе. Ожидаю обновление данных'
+    else:
+        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
@@ -120,7 +125,7 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     start_message = 'Бот начал свою работу!'
     send_message(bot, start_message)
-    current_timestamp = int(time.time()) - 2629743
+    current_timestamp = int(time.time())
     default_status = ''
     while True:
         try:
