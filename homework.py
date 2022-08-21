@@ -89,14 +89,13 @@ def check_response(response):
 
 def parse_status(homework):
     """Выдает текст с результатами ревью."""
-    try:
-        homework_name = homework.get('homework_name')
-    except ValueError:
+    homework_name = homework.get('homework_name')
+    if homework_name is None:
+        homework_name = 'нет названия'
         text_error = 'В ответе от API отсутствует ключ "homework_name"'
-        raise HomeworksKeyError(text_error)
-    try:
-        homework_status = homework.get('status')
-    except ValueError:
+        logging.debug(text_error)
+    homework_status = homework.get('status')
+    if homework_status is None:
         text_error = 'В ответе от API отсутствует ключ "status"'
         raise HomeworksKeyError(text_error)
     verdict = HOMEWORK_STATUSES[homework_status]
@@ -106,11 +105,7 @@ def parse_status(homework):
 def check_tokens():
     """Проверяет наличие всех необходимых переменных окружения."""
     tokens = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
-    if tokens != []:
-        tokens_status = all(tokens)
-        return tokens_status
-    else:
-        return False
+    return all(tokens)
 
 
 def main():
@@ -125,7 +120,7 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     start_message = 'Бот начал свою работу!'
     send_message(bot, start_message)
-    current_timestamp = int(time.time()) - 2629743
+    current_timestamp = int(time.time())
     default_status = ''
     while True:
         try:
