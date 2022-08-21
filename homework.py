@@ -120,7 +120,7 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     start_message = 'Бот начал свою работу!'
     send_message(bot, start_message)
-    current_timestamp = int(time.time())
+    current_timestamp = int(time.time()) - 2629743
     default_status = ''
     while True:
         try:
