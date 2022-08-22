@@ -15,6 +15,7 @@ from exceptions import (APIErrorException,
                         ResponseError,
                         SendMessageException,)
 
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -26,9 +27,7 @@ RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-no_status = 'no_status'
 HOMEWORK_STATUSES = {
-    'no_status': '',
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -44,7 +43,7 @@ def send_message(bot, message):
         raise SendMessageException(text_error)
     else:
         info = f'В телеграм отправлено сообщение: {message}'
-        logging.info(info)
+        logger.info(info)
 
 
 def get_api_answer(current_timestamp):
@@ -58,7 +57,7 @@ def get_api_answer(current_timestamp):
                           f'{response.status_code}')
             raise APIErrorException(text_error)
         info = 'Запрос к API выполнен успешно!'
-        logging.info(info)
+        logger.info(info)
         return response.json()
 
     except requests.exceptions.RequestException as error:
@@ -73,8 +72,7 @@ def check_response(response):
     """Проверяет результат запроса на соответствие ожиданиям."""
     if response['homeworks'] == []:
         text_error = 'От API получен пустой список проверяемых работ.'
-        logging.debug(text_error)
-        return [{'status': no_status, 'homework_name': ''}]
+        raise TypeError(text_error)
     if 'homeworks' not in response:
         text_error = 'В ответе на запрос отсутствует ключ "homeworks"'
         raise ValueError(text_error)
@@ -95,16 +93,13 @@ def parse_status(homework):
     if homework_name is None:
         homework_name = 'нет названия'
         text_error = 'В ответе от API отсутствует ключ "homework_name"'
-        logging.debug(text_error)
+        logger.debug(text_error)
     homework_status = homework.get('status')
     if homework_status is None:
         text_error = 'В ответе от API отсутствует ключ "status"'
         raise HomeworksKeyError(text_error)
     verdict = HOMEWORK_STATUSES[homework_status]
-    if homework_status == no_status:
-        return 'Нет информации о проверяемой работе. Ожидаю обновление данных'
-    else:
-        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
@@ -120,13 +115,14 @@ def main():
             'Ошибка: отсутствует(ют) обязательная(ые) '
             'переменная(ые) окружения!'
         )
-        logging.critical(message)
+        logger.critical(message)
         sys.exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     start_message = 'Бот начал свою работу!'
     send_message(bot, start_message)
     current_timestamp = int(time.time())
     default_status = ''
+    tmp_text_error = ''
     while True:
         try:
             response = get_api_answer(current_timestamp)
@@ -137,12 +133,14 @@ def main():
                 default_status = homework[0]['status']
             else:
                 info = f'Статус не изменился. Ждем еще {RETRY_TIME} сек.'
-                logging.debug(info)
+                logger.debug(info)
 
         except Exception as error:
             text_error = f'Сбой в работе программы: {error}'
-            logging.critical(message)
-            send_message(bot, text_error)
+            logger.critical(text_error)
+            if text_error != tmp_text_error:
+                send_message(bot, text_error)
+                tmp_text_error = text_error
         finally:
             time.sleep(RETRY_TIME)
 
@@ -154,5 +152,4 @@ if __name__ == '__main__':
         format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
         handlers=[logging.StreamHandler()]
     )
-    logger = logging.getLogger(__name__)
     main()
